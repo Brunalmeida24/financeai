@@ -1,0 +1,446 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+
+  provider = "postgresql"
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  name                String?
+  email               String    @unique
+  emailVerified       DateTime?
+  image               String?
+  password            String?
+  plan                UserPlan  @default(FREE)
+  role                Role      @default(USER)
+  phone               String?
+  lastLoginAt         DateTime?
+  onboardingCompleted Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  profile         UserProfile?
+  expenses        Expense[]
+  incomes         Income[]
+  goals           Goal[]
+  investments     Investment[]
+  aiChats         AiChat[]
+  aiInsights      AiInsight[]
+  financialScore  FinancialScore[]
+  accounts        Account[]
+  sessions        Session[]
+  subscriptions   Subscription[]
+  planChanges     PlanChange[]
+  contactMessages ContactMessage[]
+
+  @@index([role])
+  @@index([plan])
+  @@map("users")
+}
+
+model Subscription {
+  id                String             @id @default(cuid())
+  userId            String
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan              UserPlan
+  status            SubscriptionStatus @default(ACTIVE)
+  paymentProvider   PaymentProvider    @default(NONE)
+  externalId        String?
+  startedAt         DateTime           @default(now())
+  currentPeriodEnd  DateTime?
+  cancelAtPeriodEnd Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([userId, status])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model PlanChange {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fromPlan  UserPlan
+  toPlan    UserPlan
+  reason    String?
+  changedAt DateTime @default(now())
+  changedBy String?
+
+  @@index([userId, changedAt])
+  @@map("plan_changes")
+}
+
+model ContactMessage {
+  id        String              @id @default(cuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   String
+  message   String              @db.Text
+  status    ContactMessageStatus @default(PENDING)
+  channel   String              @default("email")
+  createdAt DateTime            @default(now())
+
+  @@index([userId])
+  @@index([status])
+  @@map("contact_messages")
+}
+
+model UserProfile {
+  id                   String          @id @default(cuid())
+  userId               String          @unique
+  user                 User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  birthDate            DateTime?
+  phone                String?
+  city                 String?
+  state                String?
+  employmentType       EmploymentType  @default(EMPLOYEE)
+  monthlyIncome        Decimal?        @db.Decimal(12, 2)
+  monthlyFixedExpenses Decimal?        @db.Decimal(12, 2)
+  investorProfile      InvestorProfile @default(CONSERVATIVE)
+  mainGoals            String[]
+  onboardingCompleted  Boolean         @default(false)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  @@map("user_profiles")
+}
+
+model Expense {
+  id            String          @id @default(cuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  amount        Decimal         @db.Decimal(12, 2)
+  category      ExpenseCategory
+  description   String?
+  date          DateTime
+  isRecurring   Boolean         @default(false)
+  recurrence    RecurrenceType?
+  paymentMethod PaymentMethod   @default(PIX)
+  tags          String[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([userId, date])
+  @@index([userId, category])
+  @@map("expenses")
+}
+
+model Income {
+  id          String         @id @default(cuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  amount      Decimal        @db.Decimal(12, 2)
+  category    IncomeCategory
+  description String?
+  date        DateTime
+  isRecurring Boolean        @default(false)
+  recurrence  RecurrenceType?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([userId, date])
+  @@map("incomes")
+}
+
+model Goal {
+  id                  String     @id @default(cuid())
+  userId              String
+  user                User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title               String
+  description         String?
+  emoji               String?
+  type                GoalType
+  targetAmount        Decimal    @db.Decimal(12, 2)
+  currentAmount       Decimal    @default(0) @db.Decimal(12, 2)
+  targetDate          DateTime?
+  status              GoalStatus @default(ACTIVE)
+  monthlyContribution Decimal?   @db.Decimal(12, 2)
+  priority            Int        @default(1)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  @@index([userId, status])
+  @@map("goals")
+}
+
+model Investment {
+  id             String         @id @default(cuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  type           InvestmentType
+  institution    String?
+  investedAmount Decimal        @db.Decimal(12, 2)
+  currentValue   Decimal        @db.Decimal(12, 2)
+  annualRate     Decimal?       @db.Decimal(6, 4)
+  indexType      IndexType?
+  purchaseDate   DateTime
+  maturityDate   DateTime?
+  isActive       Boolean        @default(true)
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([userId, isActive])
+  @@map("investments")
+}
+
+model AiChat {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String      @default("Nova conversa")
+  messages  AiMessage[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([userId])
+  @@map("ai_chats")
+}
+
+model AiMessage {
+  id        String      @id @default(cuid())
+  chatId    String
+  chat      AiChat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  role      MessageRole
+  content   String      @db.Text
+  tokens    Int?
+  createdAt DateTime    @default(now())
+
+  @@index([chatId])
+  @@map("ai_messages")
+}
+
+model AiInsight {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        InsightType
+  title       String
+  content     String      @db.Text
+  category    String?
+  isRead      Boolean     @default(false)
+  isDismissed Boolean     @default(false)
+  expiresAt   DateTime?
+  createdAt   DateTime    @default(now())
+
+  @@index([userId, isRead])
+  @@map("ai_insights")
+}
+
+model FinancialScore {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  score           Int
+  month           Int
+  year            Int
+  savingsScore    Int
+  debtScore       Int
+  investmentScore Int
+  emergencyScore  Int
+  disciplineScore Int
+  highlights      String[]
+  warnings        String[]
+  tips            String[]
+  createdAt       DateTime @default(now())
+
+  @@unique([userId, month, year])
+  @@index([userId])
+  @@map("financial_scores")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+enum UserPlan {
+  FREE
+  PRO
+  PREMIUM
+}
+
+enum Role {
+  USER
+  OWNER
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  TRIALING
+}
+
+enum PaymentProvider {
+  NONE
+  MERCADOPAGO
+  STRIPE
+}
+
+enum ContactMessageStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum EmploymentType {
+  EMPLOYEE
+  FREELANCER
+  ENTREPRENEUR
+  STUDENT
+  UNEMPLOYED
+  RETIRED
+}
+
+enum InvestorProfile {
+  CONSERVATIVE
+  MODERATE
+  AGGRESSIVE
+}
+
+enum ExpenseCategory {
+  FOOD
+  HOUSING
+  TRANSPORT
+  HEALTH
+  EDUCATION
+  ENTERTAINMENT
+  CLOTHING
+  SUBSCRIPTIONS
+  INVESTMENTS
+  SAVINGS
+  DEBT
+  TRAVEL
+  PETS
+  GIFTS
+  OTHER
+}
+
+enum IncomeCategory {
+  SALARY
+  FREELANCE
+  INVESTMENT
+  BONUS
+  RENTAL
+  GIFT
+  SALE
+  OTHER
+}
+
+enum RecurrenceType {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  PIX
+  CASH
+  TRANSFER
+  BOLETO
+  OTHER
+}
+
+enum GoalType {
+  EMERGENCY_FUND
+  TRAVEL
+  VEHICLE
+  REAL_ESTATE
+  EDUCATION
+  RETIREMENT
+  DEBT_PAYMENT
+  OTHER
+}
+
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+  CANCELLED
+}
+
+enum InvestmentType {
+  TESOURO_SELIC
+  TESOURO_IPCA
+  TESOURO_PREFIXADO
+  CDB
+  LCI
+  LCA
+  FUND
+  ETF
+  STOCK
+  FII
+  CRYPTO
+  SAVINGS
+  OTHER
+}
+
+enum IndexType {
+  CDI
+  SELIC
+  IPCA
+  IGPM
+  PREFIXADO
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+enum InsightType {
+  SPENDING_ALERT
+  GOAL_PROGRESS
+  INVESTMENT_TIP
+  NEWS_IMPACT
+  MONTHLY_SUMMARY
+  ACHIEVEMENT
+  WARNING
+  OPPORTUNITY
+}

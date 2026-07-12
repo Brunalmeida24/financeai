@@ -1,0 +1,255 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+@import "tailwindcss";
+
+@theme {
+  /* Cores base */
+  --color-background: hsl(234 28% 7%);
+  --color-foreground: hsl(230 20% 92%);
+  --color-card: hsl(234 24% 11%);
+  --color-card-foreground: hsl(230 20% 92%);
+  --color-primary: hsl(252 82% 68%);
+  --color-primary-foreground: hsl(0 0% 100%);
+  --color-secondary: hsl(234 20% 16%);
+  --color-secondary-foreground: hsl(230 15% 75%);
+  --color-muted: hsl(234 20% 14%);
+  --color-muted-foreground: hsl(230 12% 50%);
+  --color-accent: hsl(252 50% 18%);
+  --color-accent-foreground: hsl(252 90% 80%);
+  --color-destructive: hsl(0 72% 51%);
+  --color-destructive-foreground: hsl(0 0% 98%);
+  --color-success: hsl(142 71% 45%);
+  --color-success-foreground: hsl(142 60% 90%);
+  --color-warning: hsl(38 92% 50%);
+  --color-warning-foreground: hsl(38 90% 12%);
+  --color-info: hsl(199 89% 60%);
+  --color-info-foreground: hsl(199 90% 12%);
+  --color-border: hsl(234 18% 18%);
+  --color-input: hsl(234 18% 18%);
+  --color-ring: hsl(252 82% 68%);
+
+  /* Tipografia */
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+
+  /* Raios */
+  --radius: 0.875rem;
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+html,
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* Scrollbar discreta */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(234 18% 26%);
+}
+
+/* Animações utilitárias */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+@keyframes gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s ease-out both;
+}
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out both;
+}
+.animate-pulse-soft {
+  animation: pulse-soft 2.5s ease-in-out infinite;
+}
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(234 20% 14%) 0%,
+    hsl(234 20% 22%) 50%,
+    hsl(234 20% 14%) 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease-in-out infinite;
+}
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Glassmorphism utilitário */
+.glass {
+  background-color: hsl(234 24% 11% / 0.7);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid hsl(234 18% 22% / 0.6);
+}
+.glass-strong {
+  background-color: hsl(234 24% 11% / 0.85);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid hsl(234 18% 26% / 0.7);
+}
+
+/* Gradientes prontos */
+.bg-hero-gradient {
+  background: radial-gradient(
+      ellipse 60% 50% at 20% 0%,
+      hsl(252 82% 38% / 0.55),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 50% 50% at 90% 10%,
+      hsl(170 80% 45% / 0.25),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 60% 60% at 50% 100%,
+      hsl(252 82% 28% / 0.4),
+      transparent 60%
+    ),
+    linear-gradient(180deg, hsl(234 28% 7%), hsl(234 28% 5%));
+}
+
+.text-gradient {
+  background: linear-gradient(
+    100deg,
+    hsl(252 90% 80%) 0%,
+    hsl(170 80% 70%) 50%,
+    hsl(252 90% 80%) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient-shift 6s ease-in-out infinite;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, hsl(252 82% 68%) 0%, hsl(280 80% 60%) 100%);
+  color: white;
+  box-shadow: 0 8px 24px -8px hsl(252 82% 50% / 0.6);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+  box-shadow: 0 12px 30px -8px hsl(252 82% 50% / 0.7);
+}
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-ghost {
+  background: hsl(234 20% 16% / 0.6);
+  color: hsl(230 15% 80%);
+  border: 1px solid hsl(234 18% 22%);
+  transition: all 0.15s ease;
+}
+.btn-ghost:hover {
+  background: hsl(234 20% 20% / 0.8);
+  color: hsl(230 20% 95%);
+}
+
+/* Ring com glow violeta */
+.focus-glow:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px hsl(252 82% 68% / 0.35);
+}
+
+/* Reduz animações se o usuário pediu */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
