@@ -55,7 +55,7 @@ export default async function DashboardPage() {
           { label:"Gastos do Mês", value:data.totalExpenses, color:h("0 72% 61%"), icon:"💸" },
           { label:"Economizado", value:totalSaved, color:h("252 82% 68%"), icon:"🏦" },
           { label:"Investido", value:data.totalInvested, color:h("38 92% 50%"), icon:"📈" },
-        ].map(card => (
+        ].map((card: any) => (
           <div key={card.label} style={{ background:h("234 24% 11%"), border:`1px solid ${h("234 18% 18%")}`, borderRadius:"12px", padding:"16px" }}>
             <div style={{ fontSize:"11px", color:h("230 12% 50%"), marginBottom:"8px", display:"flex", alignItems:"center", gap:"6px" }}>
               <span>{card.icon}</span>{card.label}
@@ -79,7 +79,7 @@ export default async function DashboardPage() {
           Olá, {session.user.name?.split(" ")[0]}! Adicione seus gastos e receitas para insights personalizados.
         </p>
         <div style={{ display:"flex", gap:"8px", flexWrap:"wrap" }}>
-          {([["💸 Adicionar gasto","/expenses"],["🎯 Criar meta","/goals"],["🤖 Conversar com IA","/ai-chat"],["📈 Investimentos","/investments"]] as [string,string][]).map(([btn,href]) => (
+          {([["💸 Adicionar gasto","/expenses"],["🎯 Criar meta","/goals"],["🤖 Conversar com IA","/ai-chat"],["📈 Investimentos","/investments"]] as [string,string][]).map(([btn, href]: [string, string]) => (
             <a key={btn} href={href} style={{ fontSize:"11px", padding:"5px 10px", borderRadius:"6px", border:`1px solid ${h("234 18% 22%")}`, background:"transparent", color:h("230 12% 60%"), textDecoration:"none" }}>{btn}</a>
           ))}
         </div>
@@ -98,7 +98,7 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
-              {data.recentExpenses.map(expense => (
+              {data.recentExpenses.map((expense: any) => (
                 <div key={expense.id} style={{ display:"flex", alignItems:"center", gap:"10px", padding:"8px", borderRadius:"8px" }}>
                   <div style={{ width:"32px", height:"32px", borderRadius:"8px", background:h("234 20% 16%"), display:"flex", alignItems:"center", justifyContent:"center", fontSize:"14px" }}>
                     {cats[expense.category] || "📦"}
@@ -125,7 +125,7 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
-              {data.goals.map(goal => {
+              {data.goals.map((goal: any) => {
                 const pct = Math.min(Math.round((Number(goal.currentAmount)/Number(goal.targetAmount))*100),100);
                 return (
                   <div key={goal.id} style={{ background:h("234 20% 14%"), borderRadius:"8px", padding:"10px 12px" }}>
@@ -146,5 +146,6 @@ export default async function DashboardPage() {
     </div>
   );
 }
+
 
 
