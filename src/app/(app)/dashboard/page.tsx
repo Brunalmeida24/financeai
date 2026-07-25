@@ -24,7 +24,7 @@ async function getDashboardData(userId: string) {
   return {
     totalExpenses: Number(currentExpenses._sum.amount || 0),
     totalIncome: Number(currentIncomes._sum.amount || 0),
-    totalInvested: investments.reduce((sum: number, i) => sum + Number(i.currentValue), 0),
+    totalInvested: investments.reduce((sum: number, i: { currentValue: unknown }) => sum + Number(i.currentValue), 0),
     expenseChange: Number(lastMonthExpenses._sum.amount || 0) > 0
       ? ((Number(currentExpenses._sum.amount || 0) - Number(lastMonthExpenses._sum.amount || 0)) / Number(lastMonthExpenses._sum.amount || 0)) * 100
       : 0,
@@ -145,3 +145,4 @@ export default async function DashboardPage() {
     </div>
   );
 }
+
