@@ -2,19 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
-import { ensureOwner, isOwnerEmail } from "@/lib/owner";
 
 const registerSchema = z.object({
   name: z.string().min(2, "Nome muito curto"),
   email: z.string().email("Email inválido"),
   password: z.string().min(6, "Senha deve ter no mínimo 6 caracteres"),
-  phone: z.string().optional().or(z.literal("")),
 });
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, email, password, phone } = registerSchema.parse(body);
+    const { name, email, password } = registerSchema.parse(body);
 
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) {
@@ -31,14 +29,8 @@ export async function POST(req: NextRequest) {
         name,
         email,
         password: hashedPassword,
-        phone: phone && phone.length > 0 ? phone : null,
-        // Se for o e-mail do dono, marca como OWNER+PREMIUM
-        ...(isOwnerEmail(email)
-          ? { role: "OWNER" as const, plan: "PREMIUM" as const }
-          : {}),
         profile: {
           create: {
-            phone: phone && phone.length > 0 ? phone : null,
             onboardingCompleted: false,
           },
         },

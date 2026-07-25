@@ -71,6 +71,23 @@ export type SessionLike = {
 } | null
   | undefined;
 
+// Aceita tanto a Session do next-auth quanto um objeto simples com plan/role.
+// Isso evita conflito quando o `getServerSession()` retorna um objeto
+// com mais propriedades do que as declaradas em `SessionLike`.
+export type AnySession = SessionLike | { user?: { plan?: string | null; role?: string | null } } | null | undefined;
+
+export function sessionRole(s: AnySession): string | null | undefined {
+  if (!s) return null;
+  // @ts-ignore — next-auth Session tem `user.role`; SessionLike tem `role`
+  return s.role ?? s.user?.role ?? null;
+}
+
+export function sessionPlan(s: AnySession): string | null | undefined {
+  if (!s) return null;
+  // @ts-ignore — idem acima
+  return s.plan ?? s.user?.plan ?? null;
+}
+
 function normalize(plan: string | null | undefined): PlanKey {
   if (plan === "PRO" || plan === "PREMIUM") return plan;
   return "FREE";
@@ -80,16 +97,16 @@ export function getPlan(plan: string | null | undefined): PlanKey {
   return normalize(plan);
 }
 
-export function isOwner(session: SessionLike): boolean {
-  return session?.role === "OWNER";
+export function isOwner(session: AnySession): boolean {
+  return sessionRole(session) === "OWNER";
 }
 
 export function canAccess(
-  session: SessionLike,
+  session: AnySession,
   feature: FeatureKey
 ): boolean {
   if (isOwner(session)) return true;
-  const plan = getPlan(session?.plan);
+  const plan = getPlan(sessionPlan(session));
   return PLAN_FEATURES[plan].has(feature);
 }
 
@@ -109,10 +126,10 @@ export function planPrice(plan: string | null | undefined): number {
  * Compara o plano atual com um mínimo exigido.
  * Útil em middleware/gating: `atLeast(session, "PRO")` → free não passa.
  */
-export function atLeast(session: SessionLike, min: PlanKey): boolean {
+export function atLeast(session: AnySession, min: PlanKey): boolean {
   if (isOwner(session)) return true;
   const order: PlanKey[] = ["FREE", "PRO", "PREMIUM"];
-  return order.indexOf(getPlan(session?.plan)) >= order.indexOf(min);
+  return order.indexOf(getPlan(sessionPlan(session))) >= order.indexOf(min);
 }
 
 export const FEATURE_LABELS: Record<FeatureKey, string> = {

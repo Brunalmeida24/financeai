@@ -1,34 +1,8 @@
-import { getServerSession } from "next-auth";
+﻿import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatCurrency, formatDate, formatDateRelative } from "@/lib/utils";
-import { Card, CardTitle, CardDescription } from "@/components/ui/Card";
-import { PlanBadge } from "@/components/ui/PlanBadge";
-import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { AnimatedNumber } from "@/components/dashboard/AnimatedNumber";
-import { Progress } from "@/components/ui/Progress";
-import Link from "next/link";
-import { TrustBadge } from "@/components/ui/TrustBadge";
-
-const categoryLabels: Record<string, { emoji: string; label: string; tone: any }> = {
-  FOOD: { emoji: "🍔", label: "Alimentação", tone: "warning" },
-  HOUSING: { emoji: "🏠", label: "Moradia", tone: "info" },
-  TRANSPORT: { emoji: "🚗", label: "Transporte", tone: "info" },
-  HEALTH: { emoji: "💊", label: "Saúde", tone: "success" },
-  EDUCATION: { emoji: "📚", label: "Educação", tone: "primary" },
-  ENTERTAINMENT: { emoji: "🎬", label: "Lazer", tone: "primary" },
-  CLOTHING: { emoji: "👕", label: "Vestuário", tone: "muted" },
-  SUBSCRIPTIONS: { emoji: "📱", label: "Assinaturas", tone: "info" },
-  INVESTMENTS: { emoji: "📈", label: "Investimentos", tone: "success" },
-  SAVINGS: { emoji: "💰", label: "Poupança", tone: "success" },
-  DEBT: { emoji: "💳", label: "Dívidas", tone: "destructive" },
-  TRAVEL: { emoji: "✈️", label: "Viagem", tone: "primary" },
-  PETS: { emoji: "🐶", label: "Pets", tone: "muted" },
-  GIFTS: { emoji: "🎁", label: "Presentes", tone: "primary" },
-  OTHER: { emoji: "📦", label: "Outros", tone: "muted" },
-};
+import { formatCurrency } from "@/lib/utils";
+import { redirect } from "next/navigation";
 
 async function getDashboardData(userId: string) {
   const now = new Date();
@@ -36,401 +10,144 @@ async function getDashboardData(userId: string) {
   const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-  const [
-    currentExpenses,
-    lastMonthExpenses,
-    currentIncomes,
-    goals,
-    investments,
-    recentExpenses,
-    latestScore,
-  ] = await Promise.all([
-    prisma.expense.aggregate({
-      where: { userId, date: { gte: startOfMonth } },
-      _sum: { amount: true },
-    }),
-    prisma.expense.aggregate({
-      where: { userId, date: { gte: startOfLastMonth, lte: endOfLastMonth } },
-      _sum: { amount: true },
-    }),
-    prisma.income.aggregate({
-      where: { userId, date: { gte: startOfMonth } },
-      _sum: { amount: true },
-    }),
-    prisma.goal.findMany({
-      where: { userId, status: "ACTIVE" },
-      orderBy: { priority: "desc" },
-      take: 4,
-    }),
-    prisma.investment.findMany({
-      where: { userId, isActive: true },
-      take: 3,
-    }),
-    prisma.expense.findMany({
-      where: { userId },
-      orderBy: { date: "desc" },
-      take: 5,
-    }),
-    prisma.financialScore.findFirst({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-    }),
-  ]);
+  const [currentExpenses, lastMonthExpenses, currentIncomes, goals, investments, recentExpenses, latestScore] =
+    await Promise.all([
+      prisma.expense.aggregate({ where: { userId, date: { gte: startOfMonth } }, _sum: { amount: true } }),
+      prisma.expense.aggregate({ where: { userId, date: { gte: startOfLastMonth, lte: endOfLastMonth } }, _sum: { amount: true } }),
+      prisma.income.aggregate({ where: { userId, date: { gte: startOfMonth } }, _sum: { amount: true } }),
+      prisma.goal.findMany({ where: { userId, status: "ACTIVE" }, orderBy: { priority: "desc" }, take: 4 }),
+      prisma.investment.findMany({ where: { userId, isActive: true }, take: 3 }),
+      prisma.expense.findMany({ where: { userId }, orderBy: { date: "desc" }, take: 5 }),
+      prisma.financialScore.findFirst({ where: { userId }, orderBy: { createdAt: "desc" } }),
+    ]);
 
   return {
     totalExpenses: Number(currentExpenses._sum.amount || 0),
-    totalLastMonth: Number(lastMonthExpenses._sum.amount || 0),
     totalIncome: Number(currentIncomes._sum.amount || 0),
     totalInvested: investments.reduce((s, i) => s + Number(i.currentValue), 0),
-    expenseChange:
-      Number(lastMonthExpenses._sum.amount || 0) > 0
-        ? ((Number(currentExpenses._sum.amount || 0) -
-            Number(lastMonthExpenses._sum.amount || 0)) /
-            Number(lastMonthExpenses._sum.amount || 0)) *
-          100
-        : 0,
-    goals,
-    investments,
-    recentExpenses,
+    expenseChange: Number(lastMonthExpenses._sum.amount || 0) > 0
+      ? ((Number(currentExpenses._sum.amount || 0) - Number(lastMonthExpenses._sum.amount || 0)) / Number(lastMonthExpenses._sum.amount || 0)) * 100
+      : 0,
+    goals, investments, recentExpenses,
     score: latestScore?.score || null,
   };
 }
 
+const cats: Record<string, string> = {
+  FOOD:"🍔",HOUSING:"🏠",TRANSPORT:"🚗",HEALTH:"💊",EDUCATION:"📚",
+  ENTERTAINMENT:"🎬",CLOTHING:"👕",SUBSCRIPTIONS:"📱",DEBT:"💳",OTHER:"📦",
+};
+
+const s = (v: string) => `hsl(${v})`;
+
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
-  const data = await getDashboardData(session!.user.id);
+  if (!session) redirect("/login");
+  const data = await getDashboardData(session.user.id);
   const totalSaved = data.totalIncome - data.totalExpenses;
 
   return (
-    <div className="space-y-5">
-      {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card>
-          <div className="flex items-center gap-3">
-            <ScoreRing score={data.score} />
-            <div>
-              <div className="text-[11px] text-muted-foreground uppercase font-semibold">
-                Score
-              </div>
-              <div className="text-sm font-semibold text-success">
-                {data.score ? "Calculado" : "Sem dados"}
-              </div>
+    <div style={{ display:"flex", flexDirection:"column", gap:"16px" }}>
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"12px" }}>
+        {[
+          { label:"Receitas do Mês", value:data.totalIncome, color:s("142 71% 45%"), icon:"💰" },
+          { label:"Gastos do Mês", value:data.totalExpenses, color:s("0 72% 61%"), icon:"💸" },
+          { label:"Economizado", value:totalSaved, color:s("252 82% 68%"), icon:"🏦" },
+          { label:"Investido", value:data.totalInvested, color:s("38 92% 50%"), icon:"📈" },
+        ].map(card => (
+          <div key={card.label} style={{ background:s("234 24% 11%"), border:`1px solid ${s("234 18% 18%")}`, borderRadius:"12px", padding:"16px" }}>
+            <div style={{ fontSize:"11px", color:s("230 12% 50%"), marginBottom:"8px", display:"flex", alignItems:"center", gap:"6px" }}>
+              <span>{card.icon}</span>{card.label}
+            </div>
+            <div style={{ fontSize:"22px", fontWeight:700, color:card.color, fontFamily:"Space Grotesk, sans-serif" }}>
+              {formatCurrency(card.value)}
             </div>
           </div>
-        </Card>
-
-        <KpiCard
-          label="Receitas do mês"
-          emoji="💰"
-          tone="success"
-          value={data.totalIncome}
-        />
-        <KpiCard
-          label="Gastos do mês"
-          emoji="💸"
-          tone="destructive"
-          value={data.totalExpenses}
-          change={data.expenseChange}
-        />
-        <KpiCard
-          label="Economizado"
-          emoji="🏦"
-          tone="primary"
-          value={totalSaved}
-        />
+        ))}
       </div>
 
-      {/* Plano + Upgrade CTA */}
-      <PlanBanner />
-
-      {/* Insights + Confiança */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <Card className="lg:col-span-2 bg-gradient-to-br from-primary/10 to-transparent">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl btn-primary flex items-center justify-center text-lg">
-              🤖
-            </div>
-            <div>
-              <div className="font-display font-semibold text-sm">
-                Copiloto IA — pronto para ajudar
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Adicione gastos e receitas para receber insights personalizados
-              </div>
-            </div>
-            <Badge variant="primary" className="ml-auto">IA</Badge>
+      <div style={{ background:"linear-gradient(135deg,hsl(252 50% 12%),hsl(234 24% 11%))", border:`1px solid hsl(252 50% 22%)`, borderRadius:"12px", padding:"16px" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"10px" }}>
+          <div style={{ width:"32px", height:"32px", background:s("252 82% 68%"), borderRadius:"8px", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"16px" }}>🤖</div>
+          <div>
+            <div style={{ fontSize:"13px", fontWeight:600, color:s("252 90% 80%") }}>Copiloto IA</div>
+            <div style={{ fontSize:"11px", color:s("230 12% 50%") }}>Seu assistente financeiro pessoal</div>
           </div>
-          <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-            Olá! Sou seu copiloto financeiro. Comece adicionando seus{" "}
-            <strong className="text-foreground">gastos e receitas</strong> do
-            mês para que eu possa analisar seus hábitos. 💡
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/expenses">
-              <Button size="sm" variant="primary">
-                💸 Adicionar gasto
-              </Button>
-            </Link>
-            <Link href="/goals">
-              <Button size="sm" variant="outline">
-                🎯 Criar meta
-              </Button>
-            </Link>
-            <Link href="/ai-chat">
-              <Button size="sm" variant="ghost">
-                🤖 Conversar com IA
-              </Button>
-            </Link>
-          </div>
-        </Card>
-
-        <div className="space-y-3">
-          <TrustBadge
-            emoji="🔒"
-            title="Seus dados estão seguros"
-            description="Criptografados em repouso e em trânsito"
-          />
-          <TrustBadge
-            emoji="🇧🇷"
-            title="Servidores no Brasil"
-            description="Latência baixa, lei brasileira"
-          />
+          <div style={{ marginLeft:"auto", fontSize:"10px", background:s("252 50% 18%"), color:s("252 90% 80%"), padding:"3px 8px", borderRadius:"6px", fontWeight:600 }}>IA</div>
+        </div>
+        <p style={{ fontSize:"13px", color:s("230 12% 60%"), lineHeight:1.6, marginBottom:"12px" }}>
+          Olá, <strong style={{ color:s("230 20% 85%") }}>{session.user.name?.split(" ")[0]}</strong>! Adicione seus gastos e receitas para receber insights personalizados. 💡
+        </p>
+        <div style={{ display:"flex", gap:"8px", flexWrap:"wrap" }}>
+          {[["💸 Adicionar gasto","/expenses"],["🎯 Criar meta","/goals"],["🤖 Conversar com IA","/ai-chat"],["📈 Investimentos","/investments"]].map(([btn,href]) => (
+            <a key={btn} href={href} style={{ fontSize:"11px", padding:"5px 10px", borderRadius:"6px", border:`1px solid ${s("234 18% 22%")}`, background:"transparent", color:s("230 12% 60%"), textDecoration:"none" }}>{btn}</a>
+          ))}
         </div>
       </div>
 
-      {/* Middle row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <Card>
-          <div className="flex items-center justify-between mb-3">
-            <CardTitle>💸 Últimas transações</CardTitle>
-            <Link
-              href="/expenses"
-              className="text-xs text-primary hover:text-primary/80"
-            >
-              Ver todas →
-            </Link>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px" }}>
+        <div style={{ background:s("234 24% 11%"), border:`1px solid ${s("234 18% 18%")}`, borderRadius:"12px", padding:"16px" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"14px" }}>
+            <span style={{ fontSize:"13px", fontWeight:600, color:s("230 20% 92%") }}>💸 Últimas Transações</span>
+            <a href="/expenses" style={{ fontSize:"11px", color:s("252 82% 68%"), textDecoration:"none" }}>Ver todas →</a>
           </div>
           {data.recentExpenses.length === 0 ? (
-            <EmptyState
-              emoji="💸"
-              title="Nenhum gasto ainda"
-              description="Toque em + Adicionar para registrar seu primeiro gasto."
-            />
+            <div style={{ textAlign:"center", padding:"24px 0", color:s("230 12% 40%") }}>
+              <div style={{ fontSize:"32px", marginBottom:"8px" }}>💸</div>
+              <div style={{ fontSize:"13px" }}>Nenhum gasto registrado ainda</div>
+            </div>
           ) : (
-            <div className="space-y-1.5">
-              {data.recentExpenses.map((e) => {
-                const cat = categoryLabels[e.category];
-                return (
-                  <div
-                    key={e.id}
-                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary/30 transition"
-                  >
-                    <div className="w-9 h-9 rounded-lg bg-secondary flex items-center justify-center text-base flex-shrink-0">
-                      {cat?.emoji ?? "📦"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">
-                        {e.title}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground">
-                        {cat?.label} · {formatDateRelative(e.date)}
-                      </div>
-                    </div>
-                    <div className="text-sm font-bold text-destructive flex-shrink-0">
-                      -{formatCurrency(Number(e.amount))}
-                    </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
+              {data.recentExpenses.map(expense => (
+                <div key={expense.id} style={{ display:"flex", alignItems:"center", gap:"10px", padding:"8px", borderRadius:"8px" }}>
+                  <div style={{ width:"32px", height:"32px", borderRadius:"8px", background:s("234 20% 16%"), display:"flex", alignItems:"center", justifyContent:"center", fontSize:"14px" }}>
+                    {cats[expense.category] || "📦"}
                   </div>
-                );
-              })}
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:"12px", fontWeight:500, color:s("230 20% 92%") }}>{expense.title}</div>
+                  </div>
+                  <div style={{ fontSize:"13px", fontWeight:700, color:s("0 72% 61%") }}>-{formatCurrency(Number(expense.amount))}</div>
+                </div>
+              ))}
             </div>
           )}
-        </Card>
+        </div>
 
-        <Card>
-          <div className="flex items-center justify-between mb-3">
-            <CardTitle>🎯 Metas</CardTitle>
-            <Link
-              href="/goals"
-              className="text-xs text-primary hover:text-primary/80"
-            >
-              + Nova meta →
-            </Link>
+        <div style={{ background:s("234 24% 11%"), border:`1px solid ${s("234 18% 18%")}`, borderRadius:"12px", padding:"16px" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"14px" }}>
+            <span style={{ fontSize:"13px", fontWeight:600, color:s("230 20% 92%") }}>🎯 Minhas Metas</span>
+            <a href="/goals" style={{ fontSize:"11px", color:s("252 82% 68%"), textDecoration:"none" }}>+ Nova →</a>
           </div>
           {data.goals.length === 0 ? (
-            <EmptyState
-              emoji="🎯"
-              title="Nenhuma meta ainda"
-              description="Crie sua primeira meta e acompanhe o progresso."
-            />
+            <div style={{ textAlign:"center", padding:"24px 0", color:s("230 12% 40%") }}>
+              <div style={{ fontSize:"32px", marginBottom:"8px" }}>🎯</div>
+              <div style={{ fontSize:"13px" }}>Nenhuma meta criada ainda</div>
+            </div>
           ) : (
-            <div className="space-y-2.5">
-              {data.goals.map((g) => {
-                const pct = Math.min(
-                  Math.round(
-                    (Number(g.currentAmount) / Number(g.targetAmount)) * 100
-                  ),
-                  100
-                );
+            <div style={{ display:"flex", flexDirection:"column", gap:"10px" }}>
+              {data.goals.map(goal => {
+                const pct = Math.min(Math.round((Number(goal.currentAmount)/Number(goal.targetAmount))*100),100);
                 return (
-                  <div
-                    key={g.id}
-                    className="rounded-xl bg-secondary/30 border border-border p-3"
-                  >
-                    <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-sm font-medium">
-                        {g.emoji} {g.title}
-                      </span>
-                      <span className="text-xs text-success font-semibold">
-                        {pct}%
-                      </span>
+                  <div key={goal.id} style={{ background:s("234 20% 14%"), borderRadius:"8px", padding:"10px 12px" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"6px" }}>
+                      <span style={{ fontSize:"12px", fontWeight:500, color:s("230 20% 92%") }}>{goal.emoji} {goal.title}</span>
+                      <span style={{ fontSize:"11px", color:s("142 71% 45%") }}>{pct}%</span>
                     </div>
-                    <Progress value={pct} />
-                    <div className="text-[11px] text-muted-foreground mt-1.5">
-                      {formatCurrency(Number(g.currentAmount))} /{" "}
-                      {formatCurrency(Number(g.targetAmount))}
+                    <div style={{ height:"5px", background:s("234 18% 20%"), borderRadius:"3px", overflow:"hidden" }}>
+                      <div style={{ height:"100%", width:`${pct}%`, background:s("252 82% 68%"), borderRadius:"3px" }}></div>
+                    </div>
+                    <div style={{ fontSize:"10px", color:s("230 12% 45%"), marginTop:"4px" }}>
+                      {formatCurrency(Number(goal.currentAmount))} / {formatCurrency(Number(goal.targetAmount))}
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
-        </Card>
+        </div>
       </div>
 
-      <Card>
-        <div className="flex items-center justify-between mb-3">
-          <CardTitle>📈 Investimentos</CardTitle>
-          <Link
-            href="/investments"
-            className="text-xs text-primary hover:text-primary/80"
-          >
-            Ver carteira →
-          </Link>
-        </div>
-        {data.investments.length === 0 ? (
-          <EmptyState
-            emoji="📈"
-            title="Nenhum investimento ainda"
-            description="Comece a registrar sua carteira para acompanhar a evolução."
-          />
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            {data.investments.map((inv) => (
-              <div
-                key={inv.id}
-                className="rounded-xl bg-secondary/30 border border-border p-3"
-              >
-                <div className="text-sm font-medium mb-1">{inv.name}</div>
-                <div className="text-lg font-display font-bold text-gradient">
-                  {formatCurrency(Number(inv.currentValue))}
-                </div>
-                <div className="text-[11px] text-success mt-0.5">
-                  {inv.type}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
     </div>
-  );
-}
-
-function KpiCard({
-  label,
-  emoji,
-  tone,
-  value,
-  change,
-}: {
-  label: string;
-  emoji: string;
-  tone: "success" | "destructive" | "primary";
-  value: number;
-  change?: number;
-}) {
-  const color =
-    tone === "success"
-      ? "text-success"
-      : tone === "destructive"
-      ? "text-destructive"
-      : "text-primary";
-  return (
-    <Card>
-      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground uppercase tracking-wider font-semibold mb-1.5">
-        <span>{emoji}</span>
-        {label}
-      </div>
-      <div
-        className={`text-2xl font-display font-bold ${color}`}
-      >
-        <AnimatedNumber value={value} format="currency" />
-      </div>
-      {typeof change === "number" && change !== 0 && (
-        <div
-          className={`text-[11px] mt-1 ${
-            change > 0 ? "text-destructive" : "text-success"
-          }`}
-        >
-          {change > 0 ? "↑" : "↓"} {Math.abs(change).toFixed(1)}% vs mês
-          passado
-        </div>
-      )}
-    </Card>
-  );
-}
-
-function ScoreRing({ score }: { score: number | null }) {
-  const pct = score ?? 0;
-  const r = 22;
-  const c = 2 * Math.PI * r;
-  const dash = (pct / 100) * c;
-  return (
-    <div className="relative w-14 h-14 flex-shrink-0">
-      <svg width="56" height="56" viewBox="0 0 56 56" className="-rotate-90">
-        <circle
-          cx="28"
-          cy="28"
-          r={r}
-          fill="none"
-          stroke="hsl(234 18% 22%)"
-          strokeWidth="5"
-        />
-        <circle
-          cx="28"
-          cy="28"
-          r={r}
-          fill="none"
-          stroke="hsl(252 82% 68%)"
-          strokeWidth="5"
-          strokeDasharray={`${dash} ${c}`}
-          strokeLinecap="round"
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center font-display font-bold text-sm text-primary">
-        {score ?? "—"}
-      </div>
-    </div>
-  );
-}
-
-function PlanBanner() {
-  return (
-    <Card className="bg-gradient-to-r from-primary/10 to-info/10 border-primary/30 flex items-center gap-3 flex-wrap">
-      <div className="text-3xl">✨</div>
-      <div className="flex-1 min-w-0">
-        <div className="font-display font-semibold text-sm">
-          Tenha a IA Copiloto no seu bolso
-        </div>
-        <div className="text-xs text-muted-foreground">
-          Faça upgrade para Pro e desbloqueie IA, score e investimentos.
-        </div>
-      </div>
-      <Link href="/pricing">
-        <Button size="sm" variant="primary">
-          Ver planos
-        </Button>
-      </Link>
-    </Card>
   );
 }

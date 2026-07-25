@@ -11,6 +11,7 @@ declare module "next-auth" {
       role?: string | null;
       phone?: string | null;
       lastLoginAt?: string | null;
+      suspended?: boolean;
     };
   }
 }
