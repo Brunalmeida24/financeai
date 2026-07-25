@@ -1,4 +1,5 @@
-﻿import { getServerSession } from "next-auth";
+﻿// FinanceAI Dashboard v2
+import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/utils";
@@ -145,4 +146,5 @@ export default async function DashboardPage() {
     </div>
   );
 }
+
 
